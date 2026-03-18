@@ -198,7 +198,7 @@ The extension saves jobs by calling the HustleMap API **without** auth; it sends
 
 #### Endpoint
 
-- **URL**: `POST {API_BASE}/jobs/screenshot`  
+- **URL**: `POST {API_BASE}/jobs/screenshot`
   Example: `http://localhost:5000/api/jobs/screenshot`
 - **Headers**: `Content-Type: application/json`
 - **Body**:
