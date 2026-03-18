@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>HustleMap – Save Job</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="popup-container">
+      <h1 class="popup-title">Save to HustleMap</h1>
+      <p class="popup-subtitle">
+        Capture a screenshot of the job, preview it, then save to your account.
+      </p>
+
+      <!-- Settings -->
+      <section class="popup-section settings-section">
+        <h2 class="section-heading">Settings</h2>
+        <label for="apiBaseInput" class="input-label"
+          >HustleMap API Base URL</label
+        >
+        <input
+          type="text"
+          id="apiBaseInput"
+          class="text-input"
+          placeholder="http://localhost:5009/api"
+          autocomplete="off"
+        />
+        <label for="userIdInput" class="input-label"
+          >HustleMap Extension ID</label
+        >
+        <input
+          type="text"
+          id="userIdInput"
+          class="text-input"
+          placeholder="Enter HustleMap Extension ID"
+          autocomplete="off"
+        />
+        <button id="saveSettingsButton" class="secondary-button">
+          Save settings
+        </button>
+        <span id="settingsStatus" class="inline-status"></span>
+      </section>
+
+      <!-- Capture -->
+      <section class="popup-section">
+        <button id="saveJobButton" class="primary-button">
+          Save Job to HustleMap
+        </button>
+      </section>
+
+      <!-- Preview (shown after screenshot is captured) -->
+      <section id="previewSection" class="popup-section preview-section hidden">
+        <h2 class="section-heading">Preview</h2>
+        <div class="preview-image-wrap">
+          <img
+            id="previewImage"
+            src=""
+            alt="Screenshot preview"
+            class="preview-image"
+          />
+        </div>
+        <p id="previewJobUrl" class="preview-url"></p>
+        <p id="previewUserIdHint" class="preview-url hidden">
+          Enter your HustleMap User ID in Settings to save.
+        </p>
+        <div class="preview-actions">
+          <button id="confirmSaveButton" class="primary-button">
+            Save to HustleMap
+          </button>
+          <button id="resetPreviewButton" class="secondary-button">
+            Reset
+          </button>
+        </div>
+      </section>
+
+      <div id="statusMessage" class="status-message"></div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

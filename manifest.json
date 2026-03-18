@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "HustleMap – Smart Job Capture",
+  "description": "Save jobs from LinkedIn, Indeed, and Glassdoor directly into your HustleMap job tracker.",
+  "version": "1.0.0",
+  "permissions": ["activeTab", "scripting", "storage", "notifications", "tabs"],
+  "host_permissions": [
+    "*://*.linkedin.com/*",
+    "*://*.indeed.com/*",
+    "*://*.glassdoor.com/*",
+    "http://localhost:*/*",
+    "https://*/api/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Save job to HustleMap"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.linkedin.com/*",
+        "*://*.indeed.com/*",
+        "*://*.glassdoor.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
