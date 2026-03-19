@@ -9,7 +9,8 @@
     "*://*.indeed.com/*",
     "*://*.glassdoor.com/*",
     "http://localhost:*/*",
-    "https://*/api/*"
+    "https://*/api/*",
+    "https://hustlemap-2.onrender.com/*"
   ],
   "background": {
     "service_worker": "background.js"

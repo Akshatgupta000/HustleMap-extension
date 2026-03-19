@@ -1,6 +1,6 @@
 // popup.js - Screenshot capture → preview → save with user ID from settings
 
-let HUSTLEMAP_API_BASE = 'http://localhost:5000/api';
+let HUSTLEMAP_API_BASE = 'https://hustlemap-2.onrender.com/api';
 const screenshotEndpoint = () =>
   `${HUSTLEMAP_API_BASE.replace(/\/+$/, '')}/jobs/save-from-extension`;
 
@@ -90,11 +90,11 @@ async function loadState() {
     STORAGE_KEYS.pendingScreenshot,
   ]);
   let savedApiBase =
-    stored[STORAGE_KEYS.apiBase] || 'http://localhost:5000/api';
+    stored[STORAGE_KEYS.apiBase] || 'https://hustlemap-2.onrender.com/api';
     
   // Auto-correct previously hardcoded wrong ports from old versions
-  if (savedApiBase === 'http://localhost:5009/api' || savedApiBase === 'http://localhost:5005/api') {
-    savedApiBase = 'http://localhost:5000/api';
+  if (savedApiBase === 'http://localhost:5009/api' || savedApiBase === 'http://localhost:5005/api' || savedApiBase === 'http://localhost:5000/api') {
+    savedApiBase = 'https://hustlemap-2.onrender.com/api';
     chrome.storage.local.set({ [STORAGE_KEYS.apiBase]: savedApiBase });
   }
 
@@ -301,6 +301,7 @@ confirmSaveButton?.addEventListener('click', async () => {
     const body = await res.json().catch(() => ({}));
 
     if (!res.ok) {
+      console.error("Network error: Server responded with status", res.status, body);
       setStatus(body?.error || 'Failed to save.', 'error');
       showNotification(
         'HustleMap – Error',
@@ -316,7 +317,8 @@ confirmSaveButton?.addEventListener('click', async () => {
     await chrome.storage.local.remove(STORAGE_KEYS.pendingScreenshot);
     resetPreviewUI();
   } catch (err) {
-    setStatus('Network error. Try again.', 'error');
+    console.error("Network error:", err);
+    setStatus('Network error. Check console logs.', 'error');
     showNotification('HustleMap – Error', 'Network error.');
   } finally {
     confirmSaveButton.disabled = false;
