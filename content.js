@@ -239,11 +239,51 @@ const extractFromGlassdoor = () => {
   };
 };
 
+const extractGenericJobData = () => {
+  const jsonLdScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+  for (const script of jsonLdScripts) {
+    try {
+      const data = JSON.parse(script.innerText);
+      const findJob = (obj) => {
+        if (obj['@type'] === 'JobPosting') return obj;
+        if (obj['@graph']) {
+          const arr = Array.isArray(obj['@graph']) ? obj['@graph'] : [obj['@graph']];
+          return arr.find(item => item['@type'] === 'JobPosting');
+        }
+        if (Array.isArray(obj)) return obj.find(item => item['@type'] === 'JobPosting');
+        return null;
+      };
+      const job = findJob(data);
+      if (job) {
+        let companyStr = job.hiringOrganization;
+        if (typeof companyStr === 'object' && companyStr !== null) companyStr = companyStr.name;
+        let locStr = null;
+        if (job.jobLocation?.address?.addressLocality) {
+          locStr = job.jobLocation.address.addressLocality;
+        }
+        return {
+          jobTitle: job.title || null,
+          company: companyStr || null,
+          location: locStr,
+          description: job.description || null,
+          jobUrl: window.location.href,
+          source: 'generic',
+        };
+      }
+    } catch(e) {}
+  }
+  return null;
+};
+
 const extractJobDataSync = () => {
   const host = window.location.hostname || "";
-  if (!isSupportedHost()) return { error: "This page is not a supported job posting." };
   if (host.includes("indeed.com")) return extractFromIndeed();
   if (host.includes("glassdoor.com")) return extractFromGlassdoor();
+  
+  const generic = extractGenericJobData();
+  if (generic) return generic;
+
+  if (!isSupportedHost()) return { error: "This page is not a supported job posting." };
   return null;
 };
 

@@ -53,11 +53,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       const timestamp = Date.now();
       const jobUrl = tab.url || "";
+      const pageTitle = tab.title || "";
 
       await chrome.storage.local.set({
         [PENDING_KEY]: {
           screenshotBase64: cropResponse.dataUrl,
           jobUrl,
+          pageTitle,
           timestamp,
         },
       });

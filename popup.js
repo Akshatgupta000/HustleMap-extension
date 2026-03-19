@@ -111,6 +111,7 @@ async function loadState() {
       previewSection.dataset.pending = JSON.stringify({
         screenshotBase64: pending.screenshotBase64,
         jobUrl: pending.jobUrl || '',
+        pageTitle: pending.pageTitle || '',
         timestamp: pending.timestamp ?? Date.now(),
       });
     }
@@ -282,14 +283,30 @@ confirmSaveButton?.addEventListener('click', async () => {
         description: jobMeta.description,
         source,
         url: pending.jobUrl,
+        screenshot: pending.screenshotBase64,
       };
     } else {
-      // Fallback to screenshot
+      // Fallback to screenshot and page title heuristic
+      let genericTitle = pending.pageTitle || 'Captured Job';
+      let genericCompany = 'Unknown Company';
+
+      if (pending.pageTitle) {
+        if (pending.pageTitle.includes(' at ')) {
+          [genericTitle, genericCompany] = pending.pageTitle.split(' at ');
+        } else if (pending.pageTitle.includes(' | ')) {
+          [genericTitle, genericCompany] = pending.pageTitle.split(' | ');
+        } else if (pending.pageTitle.includes(' - ')) {
+          [genericTitle, genericCompany] = pending.pageTitle.split(' - ');
+        }
+      }
+
       bodyPayload = {
         extensionId: userId,
         screenshot: pending.screenshotBase64,
         source,
         url: pending.jobUrl,
+        jobTitle: genericTitle?.trim().slice(0, 100),
+        company: genericCompany?.trim().slice(0, 100),
       };
     }
 
