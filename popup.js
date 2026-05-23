@@ -12,10 +12,10 @@ const STORAGE_KEYS = {
 
 const statusEl = document.getElementById('statusMessage');
 const saveButton = document.getElementById('saveJobButton');
-const apiBaseInput = document.getElementById('apiBaseInput');
 const userIdInput = document.getElementById('userIdInput');
 const saveSettingsButton = document.getElementById('saveSettingsButton');
 const settingsStatus = document.getElementById('settingsStatus');
+const captureSection = document.getElementById('captureSection');
 const previewSection = document.getElementById('previewSection');
 const previewImage = document.getElementById('previewImage');
 const previewJobUrl = document.getElementById('previewJobUrl');
@@ -28,6 +28,7 @@ const resetPreviewUI = () => {
     previewSection.classList.add('hidden');
     previewSection.removeAttribute('data-pending');
   }
+  if (captureSection) captureSection.classList.remove('hidden');
   if (previewImage) previewImage.src = '';
   if (previewJobUrl) previewJobUrl.textContent = '';
 };
@@ -85,21 +86,9 @@ const sendToContent = async (tabId, message) => {
 // Load saved user ID and any pending screenshot
 async function loadState() {
   const stored = await chrome.storage.local.get([
-    STORAGE_KEYS.apiBase,
     STORAGE_KEYS.userId,
     STORAGE_KEYS.pendingScreenshot,
   ]);
-  let savedApiBase =
-    stored[STORAGE_KEYS.apiBase] || 'https://hustlemap-2.onrender.com/api';
-    
-  // Auto-correct previously hardcoded wrong ports from old versions
-  if (savedApiBase === 'http://localhost:5009/api' || savedApiBase === 'http://localhost:5005/api' || savedApiBase === 'http://localhost:5000/api') {
-    savedApiBase = 'https://hustlemap-2.onrender.com/api';
-    chrome.storage.local.set({ [STORAGE_KEYS.apiBase]: savedApiBase });
-  }
-
-  HUSTLEMAP_API_BASE = savedApiBase;
-  if (apiBaseInput) apiBaseInput.value = savedApiBase;
 
   const savedUserId = stored[STORAGE_KEYS.userId] || '';
   if (userIdInput) userIdInput.value = savedUserId;
@@ -108,6 +97,7 @@ async function loadState() {
   if (pending?.screenshotBase64) {
     if (previewSection) {
       previewSection.classList.remove('hidden');
+      if (captureSection) captureSection.classList.add('hidden');
       previewSection.dataset.pending = JSON.stringify({
         screenshotBase64: pending.screenshotBase64,
         jobUrl: pending.jobUrl || '',
@@ -136,23 +126,15 @@ async function loadState() {
 
 // Save user ID to storage
 saveSettingsButton?.addEventListener('click', async () => {
-  const apiBase = (apiBaseInput?.value || '').trim();
   const id = (userIdInput?.value || '').trim();
-  if (!apiBase) {
-    settingsStatus.textContent = 'Enter an API base URL.';
-    settingsStatus.style.color = '#b91c1c';
-    return;
-  }
   if (!id) {
     settingsStatus.textContent = 'Enter a user ID.';
     settingsStatus.style.color = '#b91c1c';
     return;
   }
   await chrome.storage.local.set({
-    [STORAGE_KEYS.apiBase]: apiBase,
     [STORAGE_KEYS.userId]: id,
   });
-  HUSTLEMAP_API_BASE = apiBase;
   settingsStatus.textContent = 'Saved.';
   settingsStatus.style.color = '#15803d';
   loadState(); // re-enable Save if there was a pending screenshot
@@ -197,6 +179,7 @@ saveJobButton?.addEventListener('click', async () => {
       // Extraction successful, show preview with data
       if (previewSection) {
         previewSection.classList.remove('hidden');
+        if (captureSection) captureSection.classList.add('hidden');
         previewSection.dataset.pending = JSON.stringify({
           jobMeta,
           jobUrl: tab.url,
@@ -283,7 +266,6 @@ confirmSaveButton?.addEventListener('click', async () => {
         description: jobMeta.description,
         source,
         url: pending.jobUrl,
-        screenshot: pending.screenshotBase64,
       };
     } else {
       // Fallback to screenshot and page title heuristic
@@ -302,7 +284,6 @@ confirmSaveButton?.addEventListener('click', async () => {
 
       bodyPayload = {
         extensionId: userId,
-        screenshot: pending.screenshotBase64,
         source,
         url: pending.jobUrl,
         jobTitle: genericTitle?.trim().slice(0, 100),

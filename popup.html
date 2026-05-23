@@ -14,17 +14,7 @@
 
       <!-- Settings -->
       <section class="popup-section settings-section">
-        <h2 class="section-heading">Settings</h2>
-        <label for="apiBaseInput" class="input-label"
-          >HustleMap API Base URL</label
-        >
-        <input
-          type="text"
-          id="apiBaseInput"
-          class="text-input"
-          placeholder="http://localhost:5009/api"
-          autocomplete="off"
-        />
+
         <label for="userIdInput" class="input-label"
           >HustleMap Extension ID</label
         >
@@ -42,7 +32,7 @@
       </section>
 
       <!-- Capture -->
-      <section class="popup-section">
+      <section id="captureSection" class="popup-section">
         <button id="saveJobButton" class="primary-button">
           Save Job to HustleMap
         </button>
@@ -51,7 +41,7 @@
       <!-- Preview (shown after screenshot is captured) -->
       <section id="previewSection" class="popup-section preview-section hidden">
         <h2 class="section-heading">Preview</h2>
-        <div class="preview-image-wrap">
+        <div class="preview-image-wrap hidden">
           <img
             id="previewImage"
             src=""
@@ -59,7 +49,7 @@
             class="preview-image"
           />
         </div>
-        <p id="previewJobUrl" class="preview-url"></p>
+        <p id="previewJobUrl" class="preview-url hidden"></p>
         <p id="previewUserIdHint" class="preview-url hidden">
           Enter your HustleMap User ID in Settings to save.
         </p>

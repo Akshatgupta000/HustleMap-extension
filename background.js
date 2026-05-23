@@ -70,6 +70,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         title: "HustleMap",
         message: "Screenshot captured! Click the extension to preview and save.",
       });
+
+      // Attempt to auto-open the popup
+      if (chrome.action && chrome.action.openPopup) {
+        try {
+          await chrome.action.openPopup();
+        } catch (e) {
+          console.log("Could not auto-open popup:", e);
+        }
+      }
     } catch (err) {
       console.error("HustleMap background error:", err);
       chrome.notifications.create({
