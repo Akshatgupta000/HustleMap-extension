@@ -504,7 +504,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         sendResponse({
           ok: true,
           data: {
-            title: jobData.jobTitle ?? null,
+            jobTitle: jobData.jobTitle ?? null,
             company: jobData.company ?? null,
             location: jobData.location ?? null,
             jobUrl: jobData.jobUrl ?? window.location.href,
