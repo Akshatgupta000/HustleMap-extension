@@ -17,20 +17,21 @@
 
       <!-- Settings -->
       <section class="popup-section settings-section">
-
         <label for="userIdInput" class="input-label"
           >HustleMap Extension ID</label
         >
-        <input
-          type="text"
-          id="userIdInput"
-          class="text-input"
-          placeholder="Enter HustleMap Extension ID"
-          autocomplete="off"
-        />
-        <button id="saveSettingsButton" class="secondary-button">
-          Save settings
-        </button>
+        <div class="settings-input-group">
+          <input
+            type="text"
+            id="userIdInput"
+            class="text-input"
+            placeholder="Enter Extension ID"
+            autocomplete="off"
+          />
+          <button id="saveSettingsButton" class="secondary-button save-settings-btn">
+            Save
+          </button>
+        </div>
         <span id="settingsStatus" class="inline-status"></span>
       </section>
 

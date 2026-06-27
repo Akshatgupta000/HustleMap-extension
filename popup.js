@@ -1,9 +1,5 @@
 // popup.js - Screenshot capture → preview → save with user ID from settings
 
-let HUSTLEMAP_API_BASE = 'https://hustlemap-2.onrender.com/api';
-const screenshotEndpoint = () =>
-  `${HUSTLEMAP_API_BASE.replace(/\/+$/, '')}/jobs/save-from-extension`;
-
 const STORAGE_KEYS = {
   apiBase: 'hustlemap_api_base',
   userId: 'hustlemap_extension_id',
@@ -49,22 +45,48 @@ const showNotification = (title, message) => {
   });
 };
 
+const notifyWebAppTabs = async () => {
+  try {
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs) {
+      if (
+        tab.url &&
+        (tab.url.includes('localhost') || tab.url.includes('hustlemap'))
+      ) {
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () => {
+              window.dispatchEvent(new CustomEvent('hustlemap:job_saved'));
+              window.postMessage({ type: 'HUSTLEMAP_JOB_SAVED' }, '*');
+              try {
+                localStorage.setItem(
+                  'hustlemap_last_job_saved',
+                  Date.now().toString(),
+                );
+              } catch (e) {}
+            },
+          });
+        } catch (e) {
+          // ignore tab scripting errors
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('HustleMap – failed to notify web app tabs:', e);
+  }
+};
+
 const isSupportedTab = (url) => {
   if (
     !url ||
     url.startsWith('chrome://') ||
     url.startsWith('edge://') ||
-    url.startsWith('about:')
+    url.startsWith('about:') ||
+    url.startsWith('chrome-extension://')
   )
     return false;
-  try {
-    const host = new URL(url).hostname || '';
-    return ['linkedin.com', 'indeed.com', 'glassdoor.com'].some((d) =>
-      host.includes(d),
-    );
-  } catch {
-    return false;
-  }
+  return true;
 };
 
 const sendToContent = async (tabId, message) => {
@@ -140,10 +162,10 @@ saveSettingsButton?.addEventListener('click', async () => {
   loadState(); // re-enable Save if there was a pending screenshot
 });
 
-// Start job capture (try DOM extraction first, fallback to screenshot)
+// Start job capture (always trigger rectangle screenshot mode)
 saveJobButton?.addEventListener('click', async () => {
-  setStatus('Extracting job details...', 'info');
-  saveButton.disabled = true;
+  setStatus('Draw a rectangle to capture screenshot...', 'info');
+  if (saveButton) saveButton.disabled = true;
 
   try {
     const [tab] = await chrome.tabs.query({
@@ -152,7 +174,7 @@ saveJobButton?.addEventListener('click', async () => {
     });
     if (!tab?.id) {
       setStatus('Could not find the active tab.', 'error');
-      saveButton.disabled = false;
+      if (saveButton) saveButton.disabled = false;
       return;
     }
     if (!isSupportedTab(tab.url)) {
@@ -160,58 +182,15 @@ saveJobButton?.addEventListener('click', async () => {
         'Open a job posting on LinkedIn, Indeed, or Glassdoor first.',
         'error',
       );
-      saveButton.disabled = false;
+      if (saveButton) saveButton.disabled = false;
       return;
     }
 
-    // Try to extract job data from DOM
-    let jobMeta = null;
-    try {
-      const response = await sendToContent(tab.id, { type: 'CAPTURE_JOB' });
-      if (response?.ok && response.data && !response.data.error) {
-        jobMeta = response.data;
-      }
-    } catch (metaErr) {
-      console.warn('HustleMap: failed to extract job meta from page', metaErr);
-    }
-
-    if (jobMeta && (jobMeta.jobTitle || jobMeta.company)) {
-      // Extraction successful, show preview with data
-      if (previewSection) {
-        previewSection.classList.remove('hidden');
-        if (captureSection) captureSection.classList.add('hidden');
-        previewSection.dataset.pending = JSON.stringify({
-          jobMeta,
-          jobUrl: tab.url,
-          timestamp: Date.now(),
-        });
-      }
-      if (previewImage) previewImage.src = ''; // No image
-      if (previewJobUrl) previewJobUrl.textContent = tab.url;
-
-      const needId = !userIdInput?.value?.trim();
-      if (confirmSaveButton) {
-        confirmSaveButton.disabled = needId;
-        confirmSaveButton.title = needId
-          ? 'Enter your User ID in Settings first'
-          : '';
-      }
-      if (previewUserIdHint) {
-        if (needId) previewUserIdHint.classList.remove('hidden');
-        else previewUserIdHint.classList.add('hidden');
-      }
-      setStatus('Job details extracted. Review and save.', 'success');
-    } else {
-      // Extraction failed, start screenshot mode
-      setStatus(
-        'Extraction failed. Draw a rectangle to capture screenshot...',
-        'info',
-      );
-      await sendToContent(tab.id, { type: 'START_SELECTION_MODE' });
-    }
+    await sendToContent(tab.id, { type: 'START_SELECTION_MODE' });
+    setTimeout(() => window.close(), 100);
   } catch (err) {
     setStatus('Could not start capture. Try refreshing the page.', 'error');
-    saveButton.disabled = false;
+    if (saveButton) saveButton.disabled = false;
   }
 });
 
@@ -255,52 +234,62 @@ confirmSaveButton?.addEventListener('click', async () => {
 
     const source = (jobMeta?.source || '').toString().toLowerCase() || 'other';
 
-    let bodyPayload;
-    if (jobMeta?.jobTitle || jobMeta?.company) {
-      // Send extracted data
-      bodyPayload = {
-        extensionId: userId,
-        jobTitle: jobMeta.jobTitle,
-        company: jobMeta.company,
-        location: jobMeta.location,
-        description: jobMeta.description,
-        source,
-        url: pending.jobUrl,
-      };
-    } else {
-      // Fallback to screenshot and page title heuristic
-      let genericTitle = pending.pageTitle || 'Captured Job';
-      let genericCompany = 'Unknown Company';
+    let genericTitle = pending.pageTitle || 'Captured Job';
+    let genericCompany = 'Unknown Company';
 
-      if (pending.pageTitle) {
-        if (pending.pageTitle.includes(' at ')) {
-          [genericTitle, genericCompany] = pending.pageTitle.split(' at ');
-        } else if (pending.pageTitle.includes(' | ')) {
-          [genericTitle, genericCompany] = pending.pageTitle.split(' | ');
-        } else if (pending.pageTitle.includes(' - ')) {
-          [genericTitle, genericCompany] = pending.pageTitle.split(' - ');
-        }
+    if (pending.pageTitle) {
+      if (pending.pageTitle.includes(' at ')) {
+        [genericTitle, genericCompany] = pending.pageTitle.split(' at ');
+      } else if (pending.pageTitle.includes(' | ')) {
+        [genericTitle, genericCompany] = pending.pageTitle.split(' | ');
+      } else if (pending.pageTitle.includes(' - ')) {
+        [genericTitle, genericCompany] = pending.pageTitle.split(' - ');
       }
-
-      bodyPayload = {
-        extensionId: userId,
-        source,
-        url: pending.jobUrl,
-        jobTitle: genericTitle?.trim().slice(0, 100),
-        company: genericCompany?.trim().slice(0, 100),
-      };
     }
 
-    const res = await fetch(screenshotEndpoint(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(bodyPayload),
-    });
-    const body = await res.json().catch(() => ({}));
+    const bodyPayload = {
+      extensionId: userId,
+      screenshot: pending.screenshotBase64,
+      source,
+      url: pending.jobUrl,
+      jobTitle: (jobMeta?.jobTitle || genericTitle)?.trim().slice(0, 100),
+      company: (jobMeta?.company || genericCompany)?.trim().slice(0, 100),
+      location: jobMeta?.location || '',
+      description: jobMeta?.description || '',
+    };
 
-    if (!res.ok) {
-      console.error("Network error: Server responded with status", res.status, body);
-      setStatus(body?.error || 'Failed to save.', 'error');
+    const endpoints = [
+      'http://localhost:5001/api/jobs/save-from-extension',
+      'https://hustlemap-2.onrender.com/api/jobs/save-from-extension',
+    ];
+
+    let res = null;
+    let body = {};
+    let lastErr = null;
+
+    for (const ep of endpoints) {
+      try {
+        const r = await fetch(ep, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyPayload),
+        });
+        if (r.ok) {
+          res = r;
+          body = await r.json().catch(() => ({}));
+          break;
+        } else {
+          res = r;
+          body = await r.json().catch(() => ({}));
+        }
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+
+    if (!res || !res.ok) {
+      console.error("Network or server error:", lastErr || body);
+      setStatus(body?.error || 'Failed to save to server.', 'error');
       showNotification(
         'HustleMap – Error',
         body?.error || 'Failed to save job',
@@ -308,8 +297,10 @@ confirmSaveButton?.addEventListener('click', async () => {
       confirmSaveButton.disabled = false;
       return;
     }
+
     setStatus('Saved to HustleMap.', 'success');
     showNotification('HustleMap', 'Job saved successfully');
+    notifyWebAppTabs();
 
     // Clear pending state so the next time the popup opens it starts clean.
     await chrome.storage.local.remove(STORAGE_KEYS.pendingScreenshot);
@@ -341,7 +332,7 @@ resetPreviewButton?.addEventListener('click', async () => {
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type === 'SELECTION_CANCELLED') {
     setStatus('Selection cancelled. Click Save Job to try again.', 'info');
-    saveButton.disabled = false;
+    if (saveButton) saveButton.disabled = false;
     return;
   }
   if (message?.type === 'SELECTION_COMPLETE') {
@@ -349,7 +340,7 @@ chrome.runtime.onMessage.addListener((message) => {
       'Screenshot captured! Preview above. Open the extension again if the popup closed.',
       'success',
     );
-    saveButton.disabled = false;
+    if (saveButton) saveButton.disabled = false;
   }
 });
 

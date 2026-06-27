@@ -96,13 +96,21 @@
   padding: 16px;
 }
 
+.settings-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
 .settings-section .text-input {
-  width: 100%;
-  padding: 8px 16px;
-  margin: 6px 0 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px 14px;
+  margin: 0;
   border: 1px solid #1c1c1c;
   border-radius: 9999px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   background: transparent;
   color: #1c1c1c;
@@ -114,6 +122,14 @@
 .settings-section .text-input:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgba(28, 28, 28, 0.2);
+}
+
+.save-settings-btn {
+  width: auto;
+  margin-top: 0;
+  padding: 8px 16px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .input-label {
@@ -133,10 +149,11 @@
 }
 
 .inline-status {
+  display: block;
   font-size: 12px;
   font-weight: 600;
   color: #15803d;
-  margin-left: 8px;
+  margin-top: 6px;
 }
 
 .hidden {

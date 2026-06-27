@@ -57,6 +57,19 @@ const extractSalaryFromText = (text) => {
   return null;
 };
 
+const cleanLocationText = (text) => {
+  if (!text) return null;
+  let loc = text;
+  if (loc.includes('·')) loc = loc.split('·')[0];
+  if (loc.includes('•')) loc = loc.split('•')[0];
+  if (loc.includes('|')) loc = loc.split('|')[0];
+  loc = loc.replace(/\d+\s+(day|week|month|year|hr|hour)s?\s+ago.*/i, '');
+  loc = loc.replace(/over\s+\d+.*click.*/i, '');
+  loc = loc.replace(/responses\s+managed.*/i, '');
+  loc = loc.trim();
+  return loc.length > 0 ? loc : null;
+};
+
 /** LinkedIn: current and fallback selectors for jobs search / jobs view pages. */
 const LINKEDIN_SELECTORS = {
   title: [
@@ -70,9 +83,12 @@ const LINKEDIN_SELECTORS = {
     ".topcard__flavor",
   ],
   location: [
+    ".job-details-jobs-unified-top-card__primary-description-container",
+    ".jobs-unified-top-card__primary-description",
     ".job-details-jobs-unified-top-card__bullet",
     ".topcard__flavor--bullet",
     ".jobs-unified-top-card__bullet",
+    "[class*='primary-description']",
   ],
   description: [
     ".jobs-description-content__text",
@@ -102,7 +118,13 @@ const extractFromLinkedIn = () => {
 
   const jobTitle = textOrNull(titleEl) || textOrNull(document.querySelector("h1"));
   const company = textOrNull(companyEl);
-  const location = textOrNull(locationEl);
+
+  let rawLocation = textOrNull(locationEl);
+  if (!rawLocation) {
+    const primaryContainer = document.querySelector("[class*='primary-description']");
+    if (primaryContainer) rawLocation = primaryContainer.innerText?.trim();
+  }
+  const location = cleanLocationText(rawLocation);
   const description = descriptionEl ? descriptionEl.innerText?.trim() || null : null;
 
   const salaryText =
@@ -359,7 +381,27 @@ const startSelectionMode = () => {
   box.style.width = "0px";
   box.style.height = "0px";
 
+  const instruction = document.createElement("div");
+  instruction.style.cssText = [
+    "position:fixed",
+    "top:24px",
+    "left:50%",
+    "transform:translateX(-50%)",
+    "background:#0a66c2",
+    "color:#ffffff",
+    "padding:10px 22px",
+    "border-radius:30px",
+    "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
+    "font-size:14px",
+    "font-weight:600",
+    "box-shadow:0 6px 16px rgba(0,0,0,0.25)",
+    "pointer-events:none",
+    "z-index:2147483648",
+  ].join(";");
+  instruction.textContent = "Draw a rectangle to capture job details (Esc to cancel)";
+
   document.body.appendChild(overlay);
+  overlay.appendChild(instruction);
   overlay.appendChild(box);
   selectionOverlay = overlay;
   selectionBox = box;
